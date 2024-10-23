@@ -1,0 +1,93 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from scipy import stats
+
+# Load the dataset
+data = pd.read_csv('/content/titanic_data.csv')
+
+# 1. Visualize Missing Values
+plt.figure(figsize=(10, 6))
+sns.heatmap(data.isnull(), cbar=False, cmap='viridis')
+plt.title("Missing Values Heatmap")
+plt.show()
+
+# 2. Handle Missing Values
+# Fill missing 'age' with the median and 'embarked', 'embark_town' with mode
+data['age'].fillna(data['age'].median(), inplace=True)
+data['embarked'].fillna(data['embarked'].mode()[0], inplace=True)
+data['embark_town'].fillna(data['embark_town'].mode()[0], inplace=True)
+
+# Drop the 'deck' column due to high percentage of missing values
+data.drop(columns=['deck'], inplace=True)
+
+# 3. Visualize Outliers
+# Plot distributions of 'age' and 'fare' to visually inspect outliers
+plt.figure(figsize=(14, 6))
+
+plt.subplot(1, 2, 1)
+sns.boxplot(data['age'])
+plt.title('Age - Boxplot')
+
+plt.subplot(1, 2, 2)
+sns.boxplot(data['fare'])
+plt.title('Fare - Boxplot')
+
+plt.show()
+
+# 4. Handle Outliers (Z-score method for 'age' and 'fare')
+z_scores = np.abs(stats.zscore(data[['age', 'fare']]))
+data = data[(z_scores < 3).all(axis=1)]  # Remove rows with z-scores > 3 (outliers)
+
+# Visualize cleaned data distributions (without outliers)
+plt.figure(figsize=(14, 6))
+
+plt.subplot(1, 2, 1)
+sns.histplot(data['age'], kde=True)
+plt.title('Age Distribution After Removing Outliers')
+
+plt.subplot(1, 2, 2)
+sns.histplot(data['fare'], kde=True)
+plt.title('Fare Distribution After Removing Outliers')
+
+plt.show()
+
+# 5. Encode Categorical Features (One-Hot Encoding)
+data = pd.get_dummies(data, columns=['sex', 'embarked', 'class', 'who', 'embark_town', 'alive'], drop_first=True)
+
+# 6. Normalize/Scale Features
+scaler = StandardScaler()
+numeric_columns = ['age', 'fare', 'pclass', 'sibsp', 'parch']
+
+# Visualize data before scaling
+plt.figure(figsize=(10, 6))
+sns.boxplot(data[numeric_columns])
+plt.title("Boxplot of Numeric Features Before Scaling")
+plt.show()
+
+# Apply scaling
+data[numeric_columns] = scaler.fit_transform(data[numeric_columns])
+
+# Visualize data after scaling
+plt.figure(figsize=(10, 6))
+sns.boxplot(data[numeric_columns])
+plt.title("Boxplot of Numeric Features After Scaling")
+plt.show()
+
+# 7. Split the data into training and testing sets
+X = data.drop('survived', axis=1)  # Features (all except the target column 'survived')
+y = data['survived']  # Target variable
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Check the shape of the resulting sets
+print(f"Training set shape: {X_train.shape}")
+print(f"Testing set shape: {X_test.shape}")
+
+
+output
+Training set shape: (689, 17)
+Testing set shape: (173, 17)
